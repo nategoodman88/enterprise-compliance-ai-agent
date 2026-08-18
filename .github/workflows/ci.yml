@@ -17,7 +17,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: 22
         cache: 'npm'
 
     - name: Install Dependencies
@@ -33,6 +33,8 @@ jobs:
         DATABASE_URL: "postgresql://mock:mock@localhost:5432/mock"
         OPENAI_API_KEY: "mock-key"
         ANTHROPIC_API_KEY: "mock-key"
+        SUPABASE_URL: "https://mock.supabase.co"
+        SUPABASE_SERVICE_ROLE_KEY: "mock-key"
 
     - name: Test Docker Build
-      run: docker build -t compliance-agent-test .
+      run: docker build -f Docker/Dockerfile -t compliance-agent-test .
