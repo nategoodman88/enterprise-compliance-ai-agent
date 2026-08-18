@@ -1,13 +1,24 @@
 import { NextResponse } from "next/server";
-import { ensureSchema, getPool } from "@/lib/db";
+import { getPool } from "@/lib/db";
+import { deleteDocumentFile } from "@/lib/supabase";
 
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await ensureSchema();
   const { id } = await params;
   const pool = getPool();
+
+  const { rows } = await pool.query<{ storage_path: string | null }>(
+    `SELECT storage_path FROM documents WHERE id = $1`,
+    [id]
+  );
+
   await pool.query(`DELETE FROM documents WHERE id = $1`, [id]);
+
+  if (rows[0]?.storage_path) {
+    await deleteDocumentFile(rows[0].storage_path);
+  }
+
   return NextResponse.json({ ok: true });
 }

@@ -1,9 +1,16 @@
-import { convertToModelMessages, stepCountIs, streamText, tool, type UIMessage } from "ai";
+import {
+  convertToModelMessages,
+  stepCountIs,
+  streamText,
+  tool,
+  type UIMessage,
+} from "ai";
+import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ensureSchema } from "@/lib/db";
 import { getChatModel } from "@/lib/models";
 import { embedText } from "@/lib/embeddings";
 import { searchChunks } from "@/lib/retrieval";
+import { getThreadMessages, saveThreadMessages } from "@/lib/chat-threads";
 import type { ModelMode } from "@/lib/types";
 
 export const maxDuration = 60;
@@ -23,9 +30,18 @@ Rules:
 - When you reference a specific rule or requirement, cite the source document name and page number when a page number is available, e.g. "(Security_Policy.pdf, p. 4)". Some file types (e.g. DOCX) don't have page numbers - in that case just cite the document name.
 - Keep answers concise and practical for a business audience.`;
 
+// Chat history - GET returns the persisted thread for a document (or the
+// global "All documents" thread when no documentId is given) so the client
+// can hydrate useChat with prior messages on load.
+export async function GET(request: Request) {
+  const documentId = new URL(request.url).searchParams.get("documentId");
+  const messages = await getThreadMessages(documentId);
+  return NextResponse.json({ messages });
+}
+
 export async function POST(request: Request) {
-  await ensureSchema();
   const { messages, modelMode, documentId }: ChatRequestBody = await request.json();
+  const threadDocumentId = documentId ?? null;
 
   const searchPolicyDocuments = tool({
     description: documentId
@@ -63,5 +79,10 @@ export async function POST(request: Request) {
     stopWhen: stepCountIs(5),
   });
 
-  return result.toUIMessageStreamResponse();
+  return result.toUIMessageStreamResponse({
+    originalMessages: messages,
+    onFinish: async ({ messages: updatedMessages }) => {
+      await saveThreadMessages(threadDocumentId, updatedMessages);
+    },
+  });
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { UploadZone } from "./UploadZone";
 import { StatusBadge } from "./Badge";
-import { IconFile, IconLayers, IconShieldCheck, IconTrash } from "./icons";
+import { IconDownload, IconFile, IconLayers, IconShieldCheck, IconTrash } from "./icons";
 import type { DocumentRecord } from "@/lib/types";
 
 function formatMeta(doc: DocumentRecord): string {
@@ -104,18 +104,32 @@ export function Sidebar({
                     <div className="mt-1 text-[11px] text-danger">{doc.error}</div>
                   )}
                 </div>
-                <button
-                  type="button"
-                  title="Delete document"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(doc.id);
-                  }}
-                  disabled={deletingId === doc.id}
-                  className="shrink-0 rounded-md p-1 text-foreground/30 opacity-0 transition-opacity hover:bg-danger-soft hover:text-danger group-hover:opacity-100 cursor-pointer disabled:opacity-50"
-                >
-                  <IconTrash className="text-sm" />
-                </button>
+                <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  {doc.status === "ready" && (
+                    <a
+                      href={`/api/documents/${doc.id}/file`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Download original file"
+                      onClick={(e) => e.stopPropagation()}
+                      className="rounded-md p-1 text-foreground/30 transition-colors hover:bg-accent-soft hover:text-accent"
+                    >
+                      <IconDownload className="text-sm" />
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    title="Delete document"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(doc.id);
+                    }}
+                    disabled={deletingId === doc.id}
+                    className="rounded-md p-1 text-foreground/30 transition-colors hover:bg-danger-soft hover:text-danger cursor-pointer disabled:opacity-50"
+                  >
+                    <IconTrash className="text-sm" />
+                  </button>
+                </div>
               </div>
             </li>
           ))}

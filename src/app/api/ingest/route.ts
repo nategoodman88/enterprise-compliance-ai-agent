@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureSchema, getPool, toVectorLiteral } from "@/lib/db";
+import { getPool, toVectorLiteral } from "@/lib/db";
 import { extractPdfText } from "@/lib/pdf";
 import { extractDocxText } from "@/lib/docx";
 import { chunkText } from "@/lib/chunk";
 import { embedTexts } from "@/lib/embeddings";
+import { uploadDocumentFile } from "@/lib/supabase";
 import type { DocumentRecord } from "@/lib/types";
 
 export const maxDuration = 120;
@@ -23,8 +24,6 @@ function detectKind(file: File): DocKind | null {
 }
 
 export async function POST(request: NextRequest) {
-  await ensureSchema();
-
   const formData = await request.formData();
   const file = formData.get("file");
 
@@ -48,6 +47,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const buffer = await file.arrayBuffer();
+    const mimeType = kind === "pdf" ? "application/pdf" : DOCX_MIME_TYPE;
+    const storagePath = await uploadDocumentFile(documentId, file.name, buffer, mimeType);
+
     const { text, pageCount, pageOffsets } =
       kind === "pdf" ? await extractPdfText(buffer) : await extractDocxText(buffer);
 
@@ -85,9 +87,10 @@ export async function POST(request: NextRequest) {
       }
       await client.query(
         `UPDATE documents
-         SET status = 'ready', page_count = $2, char_count = $3, chunk_count = $4
+         SET status = 'ready', page_count = $2, char_count = $3, chunk_count = $4,
+             storage_path = $5, mime_type = $6
          WHERE id = $1`,
-        [documentId, pageCount, text.length, chunks.length]
+        [documentId, pageCount, text.length, chunks.length, storagePath, mimeType]
       );
       await client.query("COMMIT");
     } catch (err) {

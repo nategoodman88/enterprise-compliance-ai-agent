@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { generateObject } from "ai";
 import { z } from "zod";
-import { ensureSchema, getPool } from "@/lib/db";
+import { getPool } from "@/lib/db";
 import { getChatModel } from "@/lib/models";
 import { embedText } from "@/lib/embeddings";
 import { searchChunks } from "@/lib/retrieval";
@@ -31,7 +31,6 @@ const auditSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  await ensureSchema();
   const { documentId, modelMode }: { documentId: string; modelMode: ModelMode } =
     await request.json();
 
@@ -107,7 +106,6 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  await ensureSchema();
   const documentId = new URL(request.url).searchParams.get("documentId");
   if (!documentId) {
     return NextResponse.json({ error: "documentId is required." }, { status: 400 });

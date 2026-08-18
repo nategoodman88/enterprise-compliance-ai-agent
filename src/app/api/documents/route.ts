@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { ensureSchema, getPool } from "@/lib/db";
+import { getPool } from "@/lib/db";
 import type { DocumentRecord } from "@/lib/types";
 
 export async function GET() {
-  await ensureSchema();
   const pool = getPool();
   const { rows } = await pool.query(
     `SELECT id, filename, status, error, page_count, char_count, chunk_count, created_at

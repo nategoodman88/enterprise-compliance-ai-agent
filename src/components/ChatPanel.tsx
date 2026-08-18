@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport, type UIMessage } from "ai";
 import { ModelToggle } from "./ModelToggle";
 import { IconFile, IconLoader, IconSearch, IconSend, IconSparkles } from "./icons";
 import type { ModelMode } from "@/lib/types";
@@ -13,25 +13,54 @@ interface SearchResult {
   excerpt: string;
 }
 
-export function ChatPanel({
-  documentId,
-  documentLabel,
-  disabled,
-  modelMode,
-  onModelModeChange,
-}: {
+interface ChatPanelProps {
   documentId: string | null;
   documentLabel: string;
   disabled?: string;
   modelMode: ModelMode;
   onModelModeChange: (mode: ModelMode) => void;
-}) {
+}
+
+// Loads the persisted thread for this document before mounting the actual
+// chat UI, so useChat starts from prior history instead of an empty state.
+export function ChatPanel(props: ChatPanelProps) {
+  const [initialMessages, setInitialMessages] = useState<UIMessage[] | null>(null);
+
+  useEffect(() => {
+    const qs = props.documentId ? `?documentId=${props.documentId}` : "";
+    fetch(`/api/chat${qs}`)
+      .then((res) => res.json())
+      .then((data) => setInitialMessages(data.messages ?? []));
+    // documentId is fixed for the lifetime of this component (AppShell
+    // remounts it via `key` on selection change), so this only runs once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (initialMessages === null) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-foreground/40">
+        <IconLoader className="mr-2" /> Loading conversation…
+      </div>
+    );
+  }
+
+  return <ChatPanelInner {...props} initialMessages={initialMessages} />;
+}
+
+function ChatPanelInner({
+  documentId,
+  documentLabel,
+  disabled,
+  modelMode,
+  onModelModeChange,
+  initialMessages,
+}: ChatPanelProps & { initialMessages: UIMessage[] }) {
   const transport = new DefaultChatTransport({
     api: "/api/chat",
     body: { modelMode, documentId },
   });
 
-  const { messages, sendMessage, status, error } = useChat({ transport });
+  const { messages, sendMessage, status, error } = useChat({ messages: initialMessages, transport });
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const isStreaming = status === "streaming" || status === "submitted";
