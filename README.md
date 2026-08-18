@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Enterprise Smart Document Compliance Agent
 
-## Getting Started
+Upload corporate policy PDFs (HR manuals, security policies, privacy policies), chat with them using retrieval-augmented generation, and run an AI-driven compliance audit against a standard set of governance, privacy, and security rules.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Frontend / API:** Next.js (App Router) + TypeScript + Tailwind CSS
+- **AI orchestration:** Vercel AI SDK (`ai`, `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/react`)
+- **Vector store:** Postgres + pgvector (self-hosted, Supabase-compatible - see below)
+- **PDF parsing:** `unpdf`, token-aware chunking via `gpt-tokenizer`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Copy `.env.example` to `.env` and fill in:
+   - `DATABASE_URL` - Postgres connection string
+   - `OPENAI_API_KEY` - used for chat ("Fast" mode) and for all embeddings (chat and audits always embed via OpenAI, since Anthropic has no embeddings endpoint)
+   - `ANTHROPIC_API_KEY` - used for chat/audit "Robust" mode
+   - `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` - only needed if you run Postgres via the included `docker-compose.yml`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. Start Postgres with pgvector:
+   ```bash
+   docker compose up -d db
+   ```
 
-## Learn More
+3. Install dependencies and run the app:
+   ```bash
+   npm install
+   npm run dev
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+The database schema (documents, chunks, audits) is created automatically on first request - no separate migration step is needed.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Note on the vector store
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The spec calls for a "free tier vector store" via Supabase. Supabase's vector store is itself Postgres + the `pgvector` extension, so this project talks to a plain Postgres instance (via `pg`) running the `pgvector/pgvector` image, which is API-compatible with how you'd query vectors on Supabase. Point `DATABASE_URL` at a hosted Supabase Postgres connection string (with the `vector` extension enabled) to use this app against a real Supabase project with no code changes.
 
-## Deploy on Vercel
+## How it works
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Ingest** (`/api/ingest`): extracts text from an uploaded PDF, splits it into ~500-token chunks with a 50-token overlap, embeds each chunk (OpenAI `text-embedding-3-small`), and stores them in `pgvector`.
+- **Chat** (`/api/chat`): a tool-calling RAG agent. The model can call a `searchPolicyDocuments` tool to retrieve relevant chunks before answering, and cites the source document and page.
+- **Audit** (`/api/audit`): retrieves relevant excerpts for each of 10 standard governance/privacy/security rules (see `src/lib/audit-rules.ts`) and asks the model to return a structured pass/partial/fail verdict, evidence, and recommendation per rule, plus an overall compliance score.
