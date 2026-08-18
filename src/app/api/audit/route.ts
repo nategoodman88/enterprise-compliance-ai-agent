@@ -6,6 +6,7 @@ import { getChatModel } from "@/lib/models";
 import { embedText } from "@/lib/embeddings";
 import { searchChunks } from "@/lib/retrieval";
 import { AUDIT_RULES } from "@/lib/audit-rules";
+import { withJsonErrors } from "@/lib/api-utils";
 import type { AuditFinding, AuditRecord, ModelMode } from "@/lib/types";
 
 export const maxDuration = 120;
@@ -30,7 +31,7 @@ const auditSchema = z.object({
   findings: z.array(findingSchema).length(AUDIT_RULES.length),
 });
 
-export async function POST(request: Request) {
+export const POST = withJsonErrors(async (request: Request) => {
   const { documentId, modelMode }: { documentId: string; modelMode: ModelMode } =
     await request.json();
 
@@ -103,9 +104,9 @@ export async function POST(request: Request) {
   );
 
   return NextResponse.json({ audit: toAuditRecord(insertResult.rows[0]) });
-}
+});
 
-export async function GET(request: Request) {
+export const GET = withJsonErrors(async (request: Request) => {
   const documentId = new URL(request.url).searchParams.get("documentId");
   if (!documentId) {
     return NextResponse.json({ error: "documentId is required." }, { status: 400 });
@@ -119,7 +120,7 @@ export async function GET(request: Request) {
   );
 
   return NextResponse.json({ audit: rows[0] ? toAuditRecord(rows[0]) : null });
-}
+});
 
 function computeScore(findings: AuditFinding[]): number {
   const weights: Record<AuditFinding["verdict"], number> = {

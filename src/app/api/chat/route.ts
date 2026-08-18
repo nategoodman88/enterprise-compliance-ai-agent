@@ -11,6 +11,7 @@ import { getChatModel } from "@/lib/models";
 import { embedText } from "@/lib/embeddings";
 import { searchChunks } from "@/lib/retrieval";
 import { getThreadMessages, saveThreadMessages } from "@/lib/chat-threads";
+import { withJsonErrors } from "@/lib/api-utils";
 import type { ModelMode } from "@/lib/types";
 
 export const maxDuration = 60;
@@ -33,13 +34,13 @@ Rules:
 // Chat history - GET returns the persisted thread for a document (or the
 // global "All documents" thread when no documentId is given) so the client
 // can hydrate useChat with prior messages on load.
-export async function GET(request: Request) {
+export const GET = withJsonErrors(async (request: Request) => {
   const documentId = new URL(request.url).searchParams.get("documentId");
   const messages = await getThreadMessages(documentId);
   return NextResponse.json({ messages });
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withJsonErrors(async (request: Request) => {
   const { messages, modelMode, documentId }: ChatRequestBody = await request.json();
   const threadDocumentId = documentId ?? null;
 
@@ -85,4 +86,4 @@ export async function POST(request: Request) {
       await saveThreadMessages(threadDocumentId, updatedMessages);
     },
   });
-}
+});

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { deleteDocumentFile } from "@/lib/supabase";
+import { withJsonErrors } from "@/lib/api-utils";
 
-export async function DELETE(
+export const DELETE = withJsonErrors(async (
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const { id } = await params;
   const pool = getPool();
 
@@ -21,4 +22,4 @@ export async function DELETE(
   }
 
   return NextResponse.json({ ok: true });
-}
+});

@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { getDocumentFileSignedUrl } from "@/lib/supabase";
+import { withJsonErrors } from "@/lib/api-utils";
 
 // Redirects to a short-lived signed URL for the original uploaded file.
 // The storage bucket is private, so downloads always go through this route
 // rather than exposing a public/static file URL to the client.
-export async function GET(
+export const GET = withJsonErrors(async (
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const { id } = await params;
   const pool = getPool();
 
@@ -23,4 +24,4 @@ export async function GET(
 
   const signedUrl = await getDocumentFileSignedUrl(rows[0].storage_path);
   return NextResponse.redirect(signedUrl);
-}
+});

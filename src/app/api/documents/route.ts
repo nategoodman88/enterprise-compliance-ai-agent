@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
+import { withJsonErrors } from "@/lib/api-utils";
 import type { DocumentRecord } from "@/lib/types";
 
-export async function GET() {
+export const GET = withJsonErrors(async () => {
   const pool = getPool();
   const { rows } = await pool.query(
     `SELECT id, filename, status, error, page_count, char_count, chunk_count, created_at
@@ -21,4 +22,4 @@ export async function GET() {
   }));
 
   return NextResponse.json({ documents });
-}
+});

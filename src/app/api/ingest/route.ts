@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getPool, toVectorLiteral } from "@/lib/db";
 import { extractPdfText } from "@/lib/pdf";
 import { extractDocxText } from "@/lib/docx";
 import { chunkText } from "@/lib/chunk";
 import { embedTexts } from "@/lib/embeddings";
 import { uploadDocumentFile } from "@/lib/supabase";
+import { withJsonErrors } from "@/lib/api-utils";
 import type { DocumentRecord } from "@/lib/types";
 
 export const maxDuration = 120;
@@ -23,7 +24,7 @@ function detectKind(file: File): DocKind | null {
   return null;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withJsonErrors(async (request: Request) => {
   const formData = await request.formData();
   const file = formData.get("file");
 
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
     [documentId]
   );
   return NextResponse.json({ document: toDocumentRecord(rows[0]) });
-}
+});
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toDocumentRecord(row: any): DocumentRecord {

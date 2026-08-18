@@ -14,6 +14,10 @@ export function getPool(): Pool {
     globalForPg.pgPool = new Pool({
       connectionString: process.env.DATABASE_URL,
       max: 10,
+      // Supabase's Postgres (including the pooler) requires SSL for external
+      // connections. `pg` does not request it by default the way `psql` does,
+      // so without this every query fails outright on a hosted deployment.
+      ssl: { rejectUnauthorized: false },
     });
   }
   return globalForPg.pgPool;
