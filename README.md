@@ -20,15 +20,23 @@ Upload corporate policy PDFs (HR manuals, security policies, privacy policies), 
 
 2. Copy `.env.example` to `.env` and fill in:
    - `DATABASE_URL` - your Supabase Postgres connection string (Project Settings → Database)
-   - `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` - Project Settings → API
+   - `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` - Project Settings → API
    - `OPENAI_API_KEY` - used for chat ("Fast" mode) and for all embeddings (chat and audits always embed via OpenAI, since Anthropic has no embeddings endpoint)
    - `ANTHROPIC_API_KEY` - used for chat/audit "Robust" mode
 
-3. Install dependencies and run the app:
+3. Create your user(s) in Supabase (Dashboard → Authentication → Users → Add user). There's no sign-up flow - accounts are created by hand.
+
+4. Install dependencies and run the app:
    ```bash
    npm install
    npm run dev
    ```
+
+## Authentication
+
+Every route (pages and API) requires a Supabase Auth session, enforced by `src/proxy.ts` (Next.js 16's renamed Middleware) plus a per-route check in each Route Handler. There's no public sign-up - create accounts directly in the Supabase dashboard.
+
+Documents and chat threads are scoped to `user_id` (a foreign key to `auth.users`), and vector search (`searchChunks`) always filters by the requesting user, so one account can never see another's documents, chunks, or chat history.
 
 ## Local development
 
@@ -40,6 +48,7 @@ Since Next.js loads `.env.local` on top of `.env` (and it's already gitignored),
 # .env.local
 DATABASE_URL='<dev project connection string>'
 SUPABASE_URL='<dev project URL>'
+SUPABASE_ANON_KEY='<dev project anon key>'
 SUPABASE_SERVICE_ROLE_KEY='<dev project service role key>'
 ```
 

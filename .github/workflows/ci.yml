@@ -34,6 +34,7 @@ jobs:
         OPENAI_API_KEY: "mock-key"
         ANTHROPIC_API_KEY: "mock-key"
         SUPABASE_URL: "https://mock.supabase.co"
+        SUPABASE_ANON_KEY: "mock-key"
         SUPABASE_SERVICE_ROLE_KEY: "mock-key"
 
     - name: Test Docker Build

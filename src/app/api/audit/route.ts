@@ -7,6 +7,7 @@ import { embedText } from "@/lib/embeddings";
 import { searchChunks } from "@/lib/retrieval";
 import { AUDIT_RULES } from "@/lib/audit-rules";
 import { withJsonErrors } from "@/lib/api-utils";
+import { getAuthedUser } from "@/lib/auth";
 import type { AuditFinding, AuditRecord, ModelMode } from "@/lib/types";
 
 export const maxDuration = 120;
@@ -32,6 +33,10 @@ const auditSchema = z.object({
 });
 
 export const POST = withJsonErrors(async (request: Request) => {
+  const auth = await getAuthedUser();
+  if ("error" in auth) return auth.error;
+  const { user } = auth;
+
   const { documentId, modelMode }: { documentId: string; modelMode: ModelMode } =
     await request.json();
 
@@ -41,8 +46,8 @@ export const POST = withJsonErrors(async (request: Request) => {
 
   const pool = getPool();
   const docResult = await pool.query(
-    `SELECT id, filename, status FROM documents WHERE id = $1`,
-    [documentId]
+    `SELECT id, filename, status FROM documents WHERE id = $1 AND user_id = $2`,
+    [documentId, user.id]
   );
   const doc = docResult.rows[0];
   if (!doc) {
@@ -55,7 +60,7 @@ export const POST = withJsonErrors(async (request: Request) => {
   const ruleContexts = await Promise.all(
     AUDIT_RULES.map(async (rule) => {
       const embedding = await embedText(rule.searchQuery);
-      const matches = await searchChunks(embedding, { documentId, limit: 3 });
+      const matches = await searchChunks(embedding, { userId: user.id, documentId, limit: 3 });
       return { rule, matches };
     })
   );
@@ -107,6 +112,10 @@ export const POST = withJsonErrors(async (request: Request) => {
 });
 
 export const GET = withJsonErrors(async (request: Request) => {
+  const auth = await getAuthedUser();
+  if ("error" in auth) return auth.error;
+  const { user } = auth;
+
   const documentId = new URL(request.url).searchParams.get("documentId");
   if (!documentId) {
     return NextResponse.json({ error: "documentId is required." }, { status: 400 });
@@ -114,9 +123,12 @@ export const GET = withJsonErrors(async (request: Request) => {
 
   const pool = getPool();
   const { rows } = await pool.query(
-    `SELECT id, document_id, model_mode, overall_score, summary, findings, created_at
-     FROM audits WHERE document_id = $1 ORDER BY created_at DESC LIMIT 1`,
-    [documentId]
+    `SELECT a.id, a.document_id, a.model_mode, a.overall_score, a.summary, a.findings, a.created_at
+     FROM audits a
+     JOIN documents d ON d.id = a.document_id
+     WHERE a.document_id = $1 AND d.user_id = $2
+     ORDER BY a.created_at DESC LIMIT 1`,
+    [documentId, user.id]
   );
 
   return NextResponse.json({ audit: rows[0] ? toAuditRecord(rows[0]) : null });

@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { UploadZone } from "./UploadZone";
 import { StatusBadge } from "./Badge";
-import { IconDownload, IconFile, IconLayers, IconShieldCheck, IconTrash } from "./icons";
+import {
+  IconDownload,
+  IconFile,
+  IconLayers,
+  IconLogOut,
+  IconShieldCheck,
+  IconTrash,
+} from "./icons";
 import type { DocumentRecord } from "@/lib/types";
 
 function formatMeta(doc: DocumentRecord): string {
@@ -19,12 +26,16 @@ export function Sidebar({
   onSelect,
   onUploaded,
   onDeleted,
+  userEmail,
+  onLogout,
 }: {
   documents: DocumentRecord[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   onUploaded: (doc: DocumentRecord) => void;
   onDeleted: (id: string) => void;
+  userEmail: string | null;
+  onLogout: () => Promise<void>;
 }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -134,6 +145,21 @@ export function Sidebar({
             </li>
           ))}
         </ul>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3">
+        <span className="min-w-0 truncate text-xs text-foreground/50" title={userEmail ?? undefined}>
+          {userEmail ?? ""}
+        </span>
+        <button
+          type="button"
+          title="Sign out"
+          onClick={() => onLogout()}
+          className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs text-foreground/50 transition-colors hover:bg-danger-soft hover:text-danger cursor-pointer"
+        >
+          <IconLogOut className="text-sm" />
+          Sign out
+        </button>
       </div>
     </aside>
   );

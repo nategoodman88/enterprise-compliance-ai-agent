@@ -12,6 +12,7 @@ import { embedText } from "@/lib/embeddings";
 import { searchChunks } from "@/lib/retrieval";
 import { getThreadMessages, saveThreadMessages } from "@/lib/chat-threads";
 import { withJsonErrors } from "@/lib/api-utils";
+import { getAuthedUser } from "@/lib/auth";
 import type { ModelMode } from "@/lib/types";
 
 export const maxDuration = 60;
@@ -35,12 +36,20 @@ Rules:
 // global "All documents" thread when no documentId is given) so the client
 // can hydrate useChat with prior messages on load.
 export const GET = withJsonErrors(async (request: Request) => {
+  const auth = await getAuthedUser();
+  if ("error" in auth) return auth.error;
+  const { user } = auth;
+
   const documentId = new URL(request.url).searchParams.get("documentId");
-  const messages = await getThreadMessages(documentId);
+  const messages = await getThreadMessages(user.id, documentId);
   return NextResponse.json({ messages });
 });
 
 export const POST = withJsonErrors(async (request: Request) => {
+  const auth = await getAuthedUser();
+  if ("error" in auth) return auth.error;
+  const { user } = auth;
+
   const { messages, modelMode, documentId }: ChatRequestBody = await request.json();
   const threadDocumentId = documentId ?? null;
 
@@ -54,6 +63,7 @@ export const POST = withJsonErrors(async (request: Request) => {
     execute: async ({ query }) => {
       const embedding = await embedText(query);
       const matches = await searchChunks(embedding, {
+        userId: user.id,
         documentId: documentId ?? undefined,
         limit: 6,
       });
@@ -83,7 +93,7 @@ export const POST = withJsonErrors(async (request: Request) => {
   return result.toUIMessageStreamResponse({
     originalMessages: messages,
     onFinish: async ({ messages: updatedMessages }) => {
-      await saveThreadMessages(threadDocumentId, updatedMessages);
+      await saveThreadMessages(user.id, threadDocumentId, updatedMessages);
     },
   });
 });

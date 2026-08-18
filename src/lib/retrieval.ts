@@ -2,22 +2,25 @@ import { getPool, toVectorLiteral } from "./db";
 import type { ChunkMatch } from "./types";
 
 interface SearchOptions {
+  userId: string;
   documentId?: string;
   limit?: number;
 }
 
 export async function searchChunks(
   queryEmbedding: number[],
-  { documentId, limit = 6 }: SearchOptions = {}
+  { userId, documentId, limit = 6 }: SearchOptions
 ): Promise<ChunkMatch[]> {
   const pool = getPool();
   const vector = toVectorLiteral(queryEmbedding);
 
-  const params: unknown[] = [vector];
-  let documentFilter = "";
+  // userId is always required, even for the "All documents" scope - without
+  // it this would search every user's documents, not just the caller's.
+  const params: unknown[] = [vector, userId];
+  let documentFilter = "WHERE d.user_id = $2";
   if (documentId) {
     params.push(documentId);
-    documentFilter = `WHERE c.document_id = $${params.length}`;
+    documentFilter += ` AND c.document_id = $${params.length}`;
   }
   params.push(limit);
 

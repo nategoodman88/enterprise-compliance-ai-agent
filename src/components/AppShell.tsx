@@ -9,7 +9,13 @@ import type { DocumentRecord, ModelMode } from "@/lib/types";
 
 type Tab = "chat" | "audit";
 
-export function AppShell() {
+export function AppShell({
+  userEmail,
+  onLogout,
+}: {
+  userEmail: string | null;
+  onLogout: () => Promise<void>;
+}) {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("chat");
@@ -59,6 +65,8 @@ export function AppShell() {
         onSelect={setSelectedId}
         onUploaded={handleUploaded}
         onDeleted={handleDeleted}
+        userEmail={userEmail}
+        onLogout={onLogout}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">

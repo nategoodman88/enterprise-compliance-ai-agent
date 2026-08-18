@@ -107,6 +107,15 @@ export function IconDownload({ className = "" }: IconProps) {
   );
 }
 
+export function IconLogOut({ className = "" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={`${base} ${className}`} aria-hidden="true">
+      <path d="M15.5 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7.5a2 2 0 0 0 2-2v-2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 12h11m0 0-3-3m3 3-3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function IconLayers({ className = "" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={`${base} ${className}`} aria-hidden="true">

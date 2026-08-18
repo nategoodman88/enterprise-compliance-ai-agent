@@ -4,8 +4,9 @@ import { extractPdfText } from "@/lib/pdf";
 import { extractDocxText } from "@/lib/docx";
 import { chunkText } from "@/lib/chunk";
 import { embedTexts } from "@/lib/embeddings";
-import { uploadDocumentFile } from "@/lib/supabase";
+import { uploadDocumentFile } from "@/lib/storage";
 import { withJsonErrors } from "@/lib/api-utils";
+import { getAuthedUser } from "@/lib/auth";
 import type { DocumentRecord } from "@/lib/types";
 
 export const maxDuration = 120;
@@ -25,6 +26,10 @@ function detectKind(file: File): DocKind | null {
 }
 
 export const POST = withJsonErrors(async (request: Request) => {
+  const auth = await getAuthedUser();
+  if ("error" in auth) return auth.error;
+  const { user } = auth;
+
   const formData = await request.formData();
   const file = formData.get("file");
 
@@ -41,8 +46,8 @@ export const POST = withJsonErrors(async (request: Request) => {
 
   const pool = getPool();
   const insertResult = await pool.query<{ id: string }>(
-    `INSERT INTO documents (filename, status) VALUES ($1, 'processing') RETURNING id`,
-    [file.name]
+    `INSERT INTO documents (filename, status, user_id) VALUES ($1, 'processing', $2) RETURNING id`,
+    [file.name, user.id]
   );
   const documentId = insertResult.rows[0].id;
 
