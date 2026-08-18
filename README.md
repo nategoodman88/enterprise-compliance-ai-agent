@@ -54,6 +54,8 @@ SUPABASE_SERVICE_ROLE_KEY='<dev project service role key>'
 
 `npm run dev` will then use the dev project automatically, while `.env` (and `docker compose up`, which reads `.env` directly) still points at production.
 
+Local development is completely set up with Docker, and can be launched with running `./start`
+
 ## How it works
 
 - **Ingest** (`/api/ingest`): extracts text from an uploaded PDF or DOCX, splits it into ~500-token chunks with a 50-token overlap, embeds each chunk (OpenAI `text-embedding-3-small`), and stores the chunks in `pgvector` plus the original file in Supabase Storage.
